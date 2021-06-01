@@ -1,0 +1,317 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Lab2–The ORM Magic &#8212; EnglishPal v0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Lab1–Dependency Analysis and Dependency Graph" href="lab1.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lab2-the-orm-magic">
+<h1><strong>Lab2</strong>–The ORM Magic<a class="headerlink" href="#lab2-the-orm-magic" title="Permalink to this headline">¶</a></h1>
+<hr class="docutils" />
+<dl class="field-list simple">
+<dt class="field-odd">小组成员信息</dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<ul class="simple">
+<li><p>毛顿 201836900224</p></li>
+<li><p>欧洲 201836900207</p></li>
+<li><p>杨晗涵 201836900210</p></li>
+<li><p>刘威 201836900222</p></li>
+<li><p>来锦韬 201836900220</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">项目GitHub地址</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://github.com/AWel11/EnglishPal">EnglishPal</a></p>
+</dd>
+<dt class="field-even">项目Read The Docs地址</dt>
+<dd class="field-even"><p><a class="reference external" href="https://readthedocs.org/projects/englishpal/">Read The Docs</a></p>
+</dd>
+</dl>
+<section id="abstract">
+<h2>Abstract<a class="headerlink" href="#abstract" title="Permalink to this headline">¶</a></h2>
+<p>理解并应用DIP，实现domain model与DB的依赖反转。</p>
+</section>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>此次实验主要是对于DIP（Dependency Inversion Principle），即依赖反转原则的一次应用。具体地说就是将一般情况下domain model对于persistence layer的依赖进行反转，使得数据库依赖（即调用）模型里的内容。</p>
+<p>对关系性数据库的理解以及对于SQLAlchemy.orm的应用是完成这次试验的关键，尤其是模仿课程参考书中所采用的classical mapping（又叫imperative mapping）方法，写出试验代码。</p>
+</section>
+<section id="materials-and-methods">
+<h2>Materials and Methods<a class="headerlink" href="#materials-and-methods" title="Permalink to this headline">¶</a></h2>
+<section id="materials">
+<h3>Materials<a class="headerlink" href="#materials" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.sqlalchemy.org/">SQLAlchemy</a> SQLAlchemy官网</p></li>
+<li><p><a class="reference external" href="https://www.cosmicpython.com/book/chapter_02_repository.html#_applying_the_dip_to_data_access">Architecture Patterns with Python</a> Chapter2 关于DIP的描述</p></li>
+</ul>
+</section>
+<section id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>理解DIP的操作，分析其优缺点。</p></li>
+<li><p>阅读参考书籍及所提供的代码，进一步理解DIP的实现细节。</p></li>
+<li><p>分析实验代码，进行补充与调试。</p></li>
+</ul>
+</section>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h2>
+<p><em>orm.py</em>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Software Architecture and Design Patterns -- Lab 2 starter code</span>
+<span class="c1"># Copyright (C) 2021 Hui Lan</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">MetaData</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">Date</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">mapper</span><span class="p">,</span> <span class="n">relationship</span>
+
+<span class="kn">import</span> <span class="nn">model</span>
+
+<span class="n">metadata</span> <span class="o">=</span> <span class="n">MetaData</span><span class="p">()</span>
+
+<span class="n">articles</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="s1">&#39;articles&#39;</span><span class="p">,</span>
+    <span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;article_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">10000</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;source&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">10</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;level&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;question&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">1000</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+<span class="n">users</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="s1">&#39;users&#39;</span><span class="p">,</span>
+    <span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;password&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">64</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;start_date&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;expiry_date&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">)</span>
+
+<span class="n">readings</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="s1">&#39;readings&#39;</span><span class="p">,</span>
+    <span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s1">&#39;users.username&#39;</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;article_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s1">&#39;articles.article_id&#39;</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+<span class="n">newwords</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="s1">&#39;newwords&#39;</span><span class="p">,</span>
+    <span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;word_id&#39;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s1">&#39;users.username&#39;</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;word&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">20</span><span class="p">)),</span>
+    <span class="n">Column</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="mi">10</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">start_mappers</span><span class="p">():</span>
+    <span class="n">newwords_mapper</span> <span class="o">=</span> <span class="n">mapper</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">NewWord</span><span class="p">,</span>
+        <span class="n">newwords</span>
+    <span class="p">)</span>
+
+    <span class="n">article_mapper</span> <span class="o">=</span> <span class="n">mapper</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">Article</span><span class="p">,</span>
+        <span class="n">articles</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">mapper</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">User</span><span class="p">,</span>
+        <span class="n">users</span><span class="p">,</span>
+        <span class="n">properties</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;newwords&#39;</span><span class="p">:</span> <span class="n">relationship</span><span class="p">(</span>
+               <span class="n">newwords_mapper</span><span class="p">,</span>
+             <span class="p">),</span>
+            <span class="s1">&#39;_read&#39;</span><span class="p">:</span> <span class="n">relationship</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">Article</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="s1">&#39;users&#39;</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="n">readings</span><span class="p">,</span> <span class="n">collection_class</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
+             <span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p><em>model.py</em>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Software Architecture and Design Patterns -- Lab 2 starter code</span>
+<span class="c1"># Copyright (C) 2021 Hui Lan</span>
+
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Article</span><span class="p">:</span>
+    <span class="n">article_id</span><span class="p">:</span><span class="nb">int</span>
+    <span class="n">text</span><span class="p">:</span><span class="nb">str</span>
+    <span class="n">source</span><span class="p">:</span><span class="nb">str</span>
+    <span class="n">date</span><span class="p">:</span><span class="nb">str</span>
+    <span class="n">level</span><span class="p">:</span><span class="nb">int</span>
+    <span class="n">question</span><span class="p">:</span><span class="nb">str</span>
+
+
+<span class="k">class</span> <span class="nc">NewWord</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">word</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">date</span><span class="o">=</span><span class="s1">&#39;yyyy-mm-dd&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">word</span> <span class="o">=</span> <span class="n">word</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="n">date</span>
+
+
+
+<span class="k">class</span> <span class="nc">User</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;12345&#39;</span><span class="p">,</span> <span class="n">start_date</span><span class="o">=</span><span class="s1">&#39;2021-05-19&#39;</span><span class="p">,</span> <span class="n">expiry_date</span><span class="o">=</span><span class="s1">&#39;2031-05-19&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">password</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span> <span class="o">=</span> <span class="n">start_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expiry_date</span> <span class="o">=</span> <span class="n">expiry_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">newwords</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">read_article</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">article</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">article</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>结果</p>
+<img alt="_images/result.png" src="_images/result.png" />
+</section>
+<section id="discussions">
+<h2>Discussions<a class="headerlink" href="#discussions" title="Permalink to this headline">¶</a></h2>
+<p>参照试验的handout和提供的代码，对已有的条件、要完成的目标以及做出的改动进行简要的分析。</p>
+<section id="id1">
+<h3>条件分析<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p><strong>orm</strong></p>
+<p>这是实现DIP的关键部分，这里的各种Table根据各自的table name定义了一个个唯一的对象，每个Table中的Column对应数据表中的字段。里面的metadata较为特殊，简单的说就是它包含了Table的集合（即包含了所有的Table，同时也保有Table间外键的关系），对于之后数据库的创建以及关系的映射有着关键作用。</p>
+<p>start_mappers()就是真正进行映射的操作了，用书上的话说就是，调用该函数，就能轻易的将数据库中的数据加载到domain model中或将domain model中的对象保存到数据库中; 而不调用该函数，domain model就能与数据库“保持距离”，实现了persistence ignorance.</p>
+<p><strong>model</strong></p>
+<p>这是domain model对于数据库中数据的对应对象表示，类中的属性对应于数据表中的字段，而read_article()之类的方法配合正确的映射则可实现一些“magic tricks”。</p>
+<p>这里的Article类有些特殊，它只是罗列了一下属性名与对应的属性类型，若一个Python类只有这些内容则无法实例化。但Article类有*dataclass*修饰符，它会自动生成__init__(), __repr__()等方法，算是比较规范的定义值对象的方法。</p>
+<p><strong>app</strong></p>
+<p>这是实际的逻辑代码，也可以说是简单的测试代码。先是一系列的准备工作，调用start_mappers()进行映射，利用metadata中的信息创建数据库，并创建了一个session,用于进行数据库的操作。</p>
+<p>接下来分别是对于添加用户、单词、文章的测试以及对于model中User类里的read_article()进行检测，这有些测试驱动开发的意思。</p>
+</section>
+<section id="id2">
+<h3>目标分析<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p><strong>从数据出发</strong></p>
+<ul class="simple">
+<li><p>根据实验的handout可知应在orm.py中实现一个readings的Table对象，以表示user与article间的关系。</p></li>
+</ul>
+<p><strong>从测试出发</strong></p>
+<ul class="simple">
+<li><p>app.py中对于model中的User, Article, NewWord均有实例化，因此我们需要在start_mappers()中显式的进行映射。</p></li>
+<li><p>app.py中出现了user.newwords，而model.py里User类并没有newwords属性，因此需要手动添加。</p></li>
+<li><p>app.py中对于user.read_article()的测试说明了readings数据表需要在映射中与User._read属性进行关联。</p></li>
+</ul>
+</section>
+<section id="id3">
+<h3>改动分析<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p><strong>搭建映射</strong></p>
+<p>start_mappers()中我们首先要对上面目标分析的三个类进行映射，没有外键的类映射较为简单，如NewWord类与Article类，只需简单的调用mapper()（这个方法在官方文档中已不再推荐直接使用，可使用registry.map_imperatively()代替），并传入model里的类对象与对应的Table对象即可。</p>
+<p>而User类就要考虑上述的newwords和_read属性了，因为users这个Table对象中并不包含这两个属性，我们要用到mapper()中的properties参数，它既可以在model类中（注意不是数据表中）增加Table对象中没有的属性，也可以指定该属性的一些信息，比如与其他类的关系（即外键等关系）。</p>
+<p>因此对于newwords,我们要指定的relationship就是model.NewWord类与newwords这个Table对象的映射。这里可以直接传入上面所定义的newwords——mapper映射对象，也可以详细的指定，写为 <cite>’newwords‘: relationship(model.NewWord, backref=’users’)</cite></p>
+<p>而_read则稍微麻烦些，因为这是个多对多关系的中间级数据表，因此在properties中需要额外提供一个secondary参数，提供readings这个Table对象; 也可以根据_read的类型额外的提供collection_class参数，这里是list。</p>
+<p><strong>使用映射</strong></p>
+<p>相对的，model.py里User类中read_article()的内容就要简单的多，只需往_read属性里添加传入的文章即可，session会自动往readings表中添加数据。</p>
+</section>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.cosmicpython.com/book/chapter_02_repository.html#_applying_the_dip_to_data_access">Architecture Patterns with Python</a> Chapter2 关于DIP的描述</p></li>
+<li><p><a class="reference external" href="https://github.com/cosmicpython/code">Code</a> 参考书籍对应代码</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">EnglishPal</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lab1.html"><strong>Lab1</strong>–Dependency Analysis and Dependency Graph</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><strong>Lab2</strong>–The ORM Magic</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="lab1.html" title="previous chapter"><strong>Lab1</strong>–Dependency Analysis and Dependency Graph</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, LanHui.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/lab2.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

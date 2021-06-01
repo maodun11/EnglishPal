@@ -11,6 +11,7 @@ Welcome to EnglishPal's documentation!
    :titlesonly:
 
    lab1
+   lab2
 
 
 Indices and tables
