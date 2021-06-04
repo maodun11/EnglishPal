@@ -64,7 +64,6 @@ def get_expiry_date(username):
     rq.do()
     result = rq.get_results()
     if len(result) > 0:
-        print(result[0]['expiry_date'])
         return  result[0]['expiry_date']
     else:
         return '20191024'
@@ -78,12 +77,12 @@ def within_range(x, y, r):
 def get_today_article(user_word_list, articleID):
 
     # make article_frequency directory if not exists
-    usr_arti_freq_directory = path_prefix + 'static/article_frequency'
-    if not os.path.exists(usr_arti_freq_directory):
-        os.mkdir(usr_arti_freq_directory)
+    user_arti_freq_directory = path_prefix + 'static/article_frequency'
+    if not os.path.exists(user_arti_freq_directory):
+        os.mkdir(user_arti_freq_directory)
     # get user_article_frequency
     username = session['username']
-    user_arti_freq_filename = usr_arti_freq_directory +  'article_frequency_%s.pickle' % (username)
+    user_arti_freq_filename = user_arti_freq_directory +  'article_frequency_%s.pickle' % (username)
 
     # 处理favicon.ico这个，每个请求会执行两次，导致本来articleID为None的请求变为articleID为特定值，这会导致错误。同时articleID这个值就是为了使得点击下一篇显示下一篇文章，而除此之外的任何操作（如刷新页面，从另一页面返回userpage等）都显示当前文章。这两个前提，致使只能出此计策（目前）。
     # 比如说，此时该用户中3号文章已访问3次，按理说还能访问一次。但他按下下一篇后，reset将articleID置为None,并正好选择了3号文章，那么3号文章就会变为4次。然而这时该请求还会执行一次，且没有了reset的置None,articleID此时就为3,后面的“剔除”操作又会将为3号文章的result给清空（因为3号文章访问次数已>4），导致报错。
@@ -105,12 +104,11 @@ def get_today_article(user_word_list, articleID):
     # set user_article_frequency as a empty dict if not exist
     if os.path.exists(user_arti_freq_filename):
         user_arti_freq_record = pickle_article_frequency_today.load_record(user_arti_freq_filename)
-        print(user_arti_freq_record)
         # flush user_article_frequency if date is different
         if get_date() != user_arti_freq_record[list(user_arti_freq_record)[0]][1]:
             user_arti_freq_record = {}
         else:
-            # delete articles from result that already showed > 3 times
+            # delete articles from result that have already showed > 3 times
             for article in result:
                 if article["article_id"] in user_arti_freq_record and user_arti_freq_record[article["article_id"]][0] > 3:
                     result.remove(article)
@@ -139,7 +137,6 @@ def get_today_article(user_word_list, articleID):
 
 
     # incorporate this article in the user_article_frequency
-    print("this article: %d" %(d["article_id"]))
     if articleID == None:
         pickle_article_frequency_today.add_article_frequency(user_arti_freq_record, d["article_id"])
         pickle_article_frequency_today.save_frequency_to_pickle(user_arti_freq_record, user_arti_freq_filename)
