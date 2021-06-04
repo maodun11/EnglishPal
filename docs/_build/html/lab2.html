@@ -208,7 +208,7 @@
 <p>start_mappers()就是真正进行映射的操作了，用书上的话说就是，调用该函数，就能轻易的将数据库中的数据加载到domain model中或将domain model中的对象保存到数据库中; 而不调用该函数，domain model就能与数据库“保持距离”，实现了persistence ignorance.</p>
 <p><strong>model</strong></p>
 <p>这是domain model对于数据库中数据的对应对象表示，类中的属性对应于数据表中的字段，而read_article()之类的方法配合正确的映射则可实现一些“magic tricks”。</p>
-<p>这里的Article类有些特殊，它只是罗列了一下属性名与对应的属性类型，若一个Python类只有这些内容则无法实例化。但Article类有*dataclass*修饰符，它会自动生成__init__(), __repr__()等方法，算是比较规范的定义值对象的方法。</p>
+<p>这里的Article类有些特殊，它只是罗列了一下属性名与对应的属性类型，若一个Python类只有这些内容则无法实例化。但Article类有&#64;dataclass修饰符，它会自动生成__init__(), __repr__()等方法，算是比较规范的定义值对象的方法。</p>
 <p><strong>app</strong></p>
 <p>这是实际的逻辑代码，也可以说是简单的测试代码。先是一系列的准备工作，调用start_mappers()进行映射，利用metadata中的信息创建数据库，并创建了一个session,用于进行数据库的操作。</p>
 <p>接下来分别是对于添加用户、单词、文章的测试以及对于model中User类里的read_article()进行检测，这有些测试驱动开发的意思。</p>
@@ -231,7 +231,7 @@
 <p><strong>搭建映射</strong></p>
 <p>start_mappers()中我们首先要对上面目标分析的三个类进行映射，没有外键的类映射较为简单，如NewWord类与Article类，只需简单的调用mapper()（这个方法在官方文档中已不再推荐直接使用，可使用registry.map_imperatively()代替），并传入model里的类对象与对应的Table对象即可。</p>
 <p>而User类就要考虑上述的newwords和_read属性了，因为users这个Table对象中并不包含这两个属性，我们要用到mapper()中的properties参数，它既可以在model类中（注意不是数据表中）增加Table对象中没有的属性，也可以指定该属性的一些信息，比如与其他类的关系（即外键等关系）。</p>
-<p>因此对于newwords,我们要指定的relationship就是model.NewWord类与newwords这个Table对象的映射。这里可以直接传入上面所定义的newwords——mapper映射对象，也可以详细的指定，写为 <cite>’newwords‘: relationship(model.NewWord, backref=’users’)</cite></p>
+<p>因此对于newwords,我们要指定的relationship就是model.NewWord类与newwords这个Table对象的映射。这里可以直接传入上面所定义的newwords_mapper映射对象，也可以详细的指定，写为 <cite>’newwords‘: relationship(model.NewWord, backref=’users’)</cite></p>
 <p>而_read则稍微麻烦些，因为这是个多对多关系的中间级数据表，因此在properties中需要额外提供一个secondary参数，提供readings这个Table对象; 也可以根据_read的类型额外的提供collection_class参数，这里是list。</p>
 <p><strong>使用映射</strong></p>
 <p>相对的，model.py里User类中read_article()的内容就要简单的多，只需往_read属性里添加传入的文章即可，session会自动往readings表中添加数据。</p>

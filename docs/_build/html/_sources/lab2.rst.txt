@@ -182,7 +182,7 @@ start_mappers()就是真正进行映射的操作了，用书上的话说就是�
 
 这是domain model对于数据库中数据的对应对象表示，类中的属性对应于数据表中的字段，而read_article()之类的方法配合正确的映射则可实现一些“magic tricks”。
 
-这里的Article类有些特殊，它只是罗列了一下属性名与对应的属性类型，若一个Python类只有这些内容则无法实例化。但Article类有*dataclass*修饰符，它会自动生成__init__(), __repr__()等方法，算是比较规范的定义值对象的方法。
+这里的Article类有些特殊，它只是罗列了一下属性名与对应的属性类型，若一个Python类只有这些内容则无法实例化。但Article类有@dataclass修饰符，它会自动生成__init__(), __repr__()等方法，算是比较规范的定义值对象的方法。
 
 **app**
 
@@ -214,7 +214,7 @@ start_mappers()中我们首先要对上面目标分析的三个类进行映射�
 
 而User类就要考虑上述的newwords和_read属性了，因为users这个Table对象中并不包含这两个属性，我们要用到mapper()中的properties参数，它既可以在model类中（注意不是数据表中）增加Table对象中没有的属性，也可以指定该属性的一些信息，比如与其他类的关系（即外键等关系）。
 
-因此对于newwords,我们要指定的relationship就是model.NewWord类与newwords这个Table对象的映射。这里可以直接传入上面所定义的newwords——mapper映射对象，也可以详细的指定，写为 `’newwords‘: relationship(model.NewWord, backref='users')` 
+因此对于newwords,我们要指定的relationship就是model.NewWord类与newwords这个Table对象的映射。这里可以直接传入上面所定义的newwords_mapper映射对象，也可以详细的指定，写为 `’newwords‘: relationship(model.NewWord, backref='users')` 
 
 而_read则稍微麻烦些，因为这是个多对多关系的中间级数据表，因此在properties中需要额外提供一个secondary参数，提供readings这个Table对象; 也可以根据_read的类型额外的提供collection_class参数，这里是list。
 

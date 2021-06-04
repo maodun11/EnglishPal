@@ -77,9 +77,13 @@ def within_range(x, y, r):
 
 def get_today_article(user_word_list, articleID):
 
+    # make article_frequency directory if not exists
+    usr_arti_freq_directory = path_prefix + 'static/article_frequency'
+    if not os.path.exists(usr_arti_freq_directory):
+        os.mkdir(usr_arti_freq_directory)
     # get user_article_frequency
     username = session['username']
-    user_arti_freq_filename = path_prefix + 'static/article_frequency/' +  'article_frequency_%s.pickle' % (username)
+    user_arti_freq_filename = usr_arti_freq_directory +  'article_frequency_%s.pickle' % (username)
 
     # 处理favicon.ico这个，每个请求会执行两次，导致本来articleID为None的请求变为articleID为特定值，这会导致错误。同时articleID这个值就是为了使得点击下一篇显示下一篇文章，而除此之外的任何操作（如刷新页面，从另一页面返回userpage等）都显示当前文章。这两个前提，致使只能出此计策（目前）。
     # 比如说，此时该用户中3号文章已访问3次，按理说还能访问一次。但他按下下一篇后，reset将articleID置为None,并正好选择了3号文章，那么3号文章就会变为4次。然而这时该请求还会执行一次，且没有了reset的置None,articleID此时就为3,后面的“剔除”操作又会将为3号文章的result给清空（因为3号文章访问次数已>4），导致报错。
