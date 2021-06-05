@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Lab3–The Service Layer &#8212; EnglishPal v0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Lab2–The ORM Magic" href="lab2.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lab3-the-service-layer">
+<h1><strong>Lab3</strong>–The Service Layer<a class="headerlink" href="#lab3-the-service-layer" title="Permalink to this headline">¶</a></h1>
+<hr class="docutils" />
+<dl class="field-list simple">
+<dt class="field-odd">小组成员信息</dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<ul class="simple">
+<li><p>毛顿 201836900224</p></li>
+<li><p>欧洲 201836900207</p></li>
+<li><p>杨晗涵 201836900210</p></li>
+<li><p>刘威 201836900222</p></li>
+<li><p>来锦韬 201836900220</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">项目GitHub地址</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://github.com/AWel11/EnglishPal">EnglishPal</a></p>
+</dd>
+<dt class="field-even">项目Read The Docs地址</dt>
+<dd class="field-even"><p><a class="reference external" href="https://readthedocs.org/projects/englishpal/">Read The Docs</a></p>
+</dd>
+</dl>
+<section id="abstract">
+<h2>Abstract<a class="headerlink" href="#abstract" title="Permalink to this headline">¶</a></h2>
+<p>理解应用service layer。</p>
+</section>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Service layer（又名orchestration layer或use-case layer）位于Flask API与domain model之间，负责管理orchestration logic，具体来说包括以下几点：</p>
+<ul class="simple">
+<li><p>从repository中取出数据库数据</p></li>
+<li><p>将从Flask API接受到的requset输入与数据库数据进行比较，处理异常与错误</p></li>
+<li><p>调用domain model中的服务，对输入进行一系列操作</p></li>
+<li><p>保存改动至数据库</p></li>
+</ul>
+<p>当然这是还未引入uow（unit of work）的servie layer，与database layer仍具有高耦合性。</p>
+<p>本实验的关键就在于对上面几个步骤的理解，并根据实验需求进行合理应用。</p>
+</section>
+<section id="materials-and-methods">
+<h2>Materials and Methods<a class="headerlink" href="#materials-and-methods" title="Permalink to this headline">¶</a></h2>
+<section id="materials">
+<h3>Materials<a class="headerlink" href="#materials" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.cosmicpython.com/book/chapter_04_service_layer.html">Architecture Patterns with Python</a> Chapter4 关于service layer的描述</p></li>
+</ul>
+</section>
+<section id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>了解services layer的功能。</p></li>
+<li><p>阅读参考书籍与配套代码，加深对services layer的理解。</p></li>
+<li><p>分析实验代码，明确实验需求，进行补充与调试。</p></li>
+</ul>
+</section>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h2>
+<p><em>orm.py</em>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Software Architecture and Design Patterns -- Lab 3 starter code</span>
+<span class="c1"># An implementation of the Service Layer</span>
+<span class="c1"># Copyright (C) 2021 Hui Lan</span>
+
+
+<span class="c1"># word and its difficulty level</span>
+<span class="n">WORD_DIFFICULTY_LEVEL</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;starbucks&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;luckin&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;secondcup&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;costa&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;timhortons&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;frappuccino&#39;</span><span class="p">:</span><span class="mi">6</span><span class="p">}</span>
+
+
+<span class="k">class</span> <span class="nc">UnknownUser</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">NoArticleMatched</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">def</span> <span class="nf">is_valid_user</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">users</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">username</span> <span class="ow">in</span> <span class="p">{</span><span class="n">u</span><span class="o">.</span><span class="n">username</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">users</span><span class="p">}</span> <span class="ow">and</span> <span class="n">password</span> <span class="ow">in</span> <span class="p">{</span><span class="n">u</span><span class="o">.</span><span class="n">password</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">users</span><span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">user_repo</span><span class="p">,</span> <span class="n">article_repo</span><span class="p">,</span> <span class="n">session</span><span class="p">):</span>
+    <span class="c1"># fetch data</span>
+    <span class="n">users</span> <span class="o">=</span> <span class="n">user_repo</span><span class="o">.</span><span class="n">list</span><span class="p">()</span>
+    <span class="n">articles</span> <span class="o">=</span> <span class="n">article_repo</span><span class="o">.</span><span class="n">list</span><span class="p">()</span>
+
+    <span class="c1"># check validity of user</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid_user</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="n">user</span><span class="o">.</span><span class="n">password</span><span class="p">,</span> <span class="n">users</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">UnknownUser</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Invalid user&#39;</span><span class="p">)</span>
+
+    <span class="c1"># get user&#39;s vocabulary level</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">user_repo</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
+    <span class="n">Ulevels</span> <span class="o">=</span> <span class="p">[</span><span class="n">WORD_DIFFICULTY_LEVEL</span><span class="p">[</span><span class="n">newword</span><span class="o">.</span><span class="n">word</span><span class="p">]</span> <span class="k">for</span> <span class="n">newword</span> <span class="ow">in</span> <span class="n">user</span><span class="o">.</span><span class="n">newwords</span><span class="p">]</span>
+    <span class="n">Ulevels</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Ulevels</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Ulevels</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="mi">3</span>
+    <span class="n">top_Ulevels</span> <span class="o">=</span> <span class="n">Ulevels</span><span class="p">[:</span><span class="n">num</span><span class="p">]</span>
+    <span class="n">Ulevel</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">top_Ulevels</span><span class="p">)</span> <span class="o">/</span> <span class="n">num</span>
+
+    <span class="c1"># choose a suitable article and read it</span>
+    <span class="n">Alevels</span> <span class="o">=</span> <span class="p">[</span><span class="n">article</span><span class="o">.</span><span class="n">level</span> <span class="k">for</span> <span class="n">article</span> <span class="ow">in</span> <span class="n">articles</span><span class="p">]</span>
+    <span class="n">Alevels_with_indices</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">Alevels</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">Alevel_with_index</span> <span class="ow">in</span> <span class="n">Alevels_with_indices</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">Alevel_with_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">Ulevel</span><span class="p">:</span>
+            <span class="n">article</span> <span class="o">=</span> <span class="n">articles</span><span class="p">[</span><span class="n">Alevel_with_index</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="n">user</span><span class="o">.</span><span class="n">read_article</span><span class="p">(</span><span class="n">article</span><span class="p">)</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">article</span><span class="o">.</span><span class="n">article_id</span>
+    <span class="k">raise</span> <span class="n">NoArticleMatched</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No article matched&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>结果</p>
+<img alt="_images/result1.png" src="_images/result1.png" />
+</section>
+<section id="discussions">
+<h2>Discussions<a class="headerlink" href="#discussions" title="Permalink to this headline">¶</a></h2>
+<p>这次实验的目的较单一，相对于Lab2要对SqlAlchemy有一定的理解并熟悉规定语法来说，Lab3只要明确需求、编码、调试就结束了，可以说是相当线性。</p>
+<p>因此这里就简单的描述下流程，不深究每条语句的作用或原因。</p>
+<section id="id1">
+<h3>需求分析<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>结合service layer的功能，确定 <code class="code docutils literal notranslate"><span class="pre">read()</span></code> 流程</p>
+<ol class="arabic simple">
+<li><p>从 <code class="code docutils literal notranslate"><span class="pre">user_repo</span></code> 和 <code class="code docutils literal notranslate"><span class="pre">article_repo</span></code> 中取出数据。</p></li>
+<li><p>检查传入user的合法性，若不合法则抛出 <code class="code docutils literal notranslate"><span class="pre">UnknownUser</span></code> 异常。</p></li>
+<li><p>计算user的词汇水平。</p></li>
+<li><p>挑选一篇难度适合的article给user读，并返回 <code class="code docutils literal notranslate"><span class="pre">article_id</span></code> ; 若没有符合条件的article，则抛出 <code class="code docutils literal notranslate"><span class="pre">NoArticleMatched</span></code> 异常。</p></li>
+</ol>
+</section>
+<section id="id2">
+<h3>注意要点<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p><code class="code docutils literal notranslate"><span class="pre">UnknownUser</span></code> 异常和 <code class="code docutils literal notranslate"><span class="pre">NoArticleMatched</span></code> 均继承自 <code class="code docutils literal notranslate"><span class="pre">Exception</span></code> ，因此无需添加其他属性或方法，使用时直接传入要提示的字符串信息即可。</p></li>
+<li><p>传入的user仅仅是个 <code class="code docutils literal notranslate"><span class="pre">model.User</span></code> 对象，没有和数据库关联起来。在确认用户信息合法后，需要调用 <code class="code docutils literal notranslate"><span class="pre">user_repo</span></code> 中的 <code class="code docutils literal notranslate"><span class="pre">get()</span></code> 方法来获取关联对象。</p></li>
+<li><p>计算user词汇水平时，先将该用户的词汇映射为对应的难度，按难度从高到低排序，并取出前几个（最多3个）计算平均难度，即是该用户的词汇水平。</p></li>
+<li><p>选择难度适合的article时，先根据article的level进行排序，这样能选出与用户水平最贴切的文章，并调用 <code class="code docutils literal notranslate"><span class="pre">user.read_article()</span></code> 保存记录。</p></li>
+<li><p>最后调用 <code class="code docutils literal notranslate"><span class="pre">session.commit()</span></code> 保存数据库操作。</p></li>
+</ul>
+<p>实现细节请看源码。</p>
+</section>
+<section id="id3">
+<h3>问题回答<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p><strong>Does your function read in services.py follow the Single Responsibility Principle (SRP) principle? Why or why not?</strong></p>
+<p><code class="code docutils literal notranslate"><span class="pre">read()</span></code> 并没有遵守SRP准则。若把上面需求分析中的每一点看成一个responsibility，那显然service layer已经break the principle了; 即使将整个流程当作一个任务，把service layer看成Flask API与domain layer的桥梁，它里面也包含了 <code class="code docutils literal notranslate"><span class="pre">session.commit()</span></code> 这本应属于数据库的操作。</p>
+</section>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.cosmicpython.com/book/chapter_04_service_layer.html">Architecture Patterns with Python</a> Chapter4 关于service layer的描述</p></li>
+<li><p><a class="reference external" href="https://github.com/cosmicpython/code">Code</a> 参考书籍对应代码</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">EnglishPal</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lab1.html"><strong>Lab1</strong>–Dependency Analysis and Dependency Graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lab2.html"><strong>Lab2</strong>–The ORM Magic</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><strong>Lab3</strong>–The Service Layer</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="lab2.html" title="previous chapter"><strong>Lab2</strong>–The ORM Magic</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, LanHui.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/lab3.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -12,6 +12,7 @@ Welcome to EnglishPal's documentation!
 
    lab1
    lab2
+   lab3
 
 
 Indices and tables
