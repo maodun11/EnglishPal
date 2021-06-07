@@ -9,7 +9,7 @@ import random, string, time
 driver = webdriver.Remote('http://localhost:4444/wd/hub', DesiredCapabilities.CHROME)
 driver.implicitly_wait(10)
 
-HOME_PAGE = 'http://121.4.94.30:6000/'
+HOME_PAGE = 'http://121.4.94.30:91/'
 
 
 
@@ -34,26 +34,29 @@ def test_next():
         elem.click()
     
         assert 'EnglishPal Study Room for ' + uname in  driver.title
-    
+
+        diffdict = {}
         # get essay content
         driver.save_screenshot('./app/test/test_next_essay_pic0.png')    
         elem = driver.find_element_by_id('text-content')
         essay_content = elem.text
-    
+        diffdict[essay_content] = 0
         # click Next
-        differ = 0
-        for i in range(3):
+        
+        for i in range(50):
             elem = driver.find_element_by_link_text('下一篇')
             elem.click()
             driver.save_screenshot('./app/test/test_next_essay_pic1.png')
             elem = driver.find_element_by_id('text-content')
             current_essay_content = elem.text
     
-            if current_essay_content != essay_content:
-                diff = 1
-                break
+            if current_essay_content in diffdict:
+                diffdict[current_essay_content] += 1
+            else:
+                diffdict[current_essay_content] = 1
     
-        assert diff == 1
+        for i in diffdict.values():
+            print(i)
+            assert i < 3
     finally:
         driver.quit()
-
