@@ -19,7 +19,7 @@ pipeline {
                 echo 'Building..'
 		sh 'sudo docker build -t englishpal_lw .'
 		sh 'sudo docker stop $(docker ps -aq)'
-		sh 'sudo docker run -d -p 6000:80 -v /var/lib/jenkins/workspace/EnglishPal_Pipeline_master/app/static/frequency:/app/static/frequency -t englishpal_lw'
+		sh 'sudo docker run -d -p 91:80 -v /var/lib/jenkins/workspace/EnglishPal_Pipeline_master/app/static/frequency:/app/static/frequency -t englishpal_lw'
             }
         }
         stage('TestIt') {
